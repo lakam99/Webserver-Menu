@@ -56,13 +56,13 @@ function restart-webserver($service) {
 
 function start-apache {
     set-location "C:\xampp";
-    start-process -filepath ".\apache_start.bat";
+    Invoke-Expression "cmd /c start powershell -command {./apache_start.bat;}";
     Write-Host "Apache started.";
 }
 
 function stop-apache {
     set-location "C:\xampp";
-    invoke-expression "cmd /c start powershell -command {./apache_stop.bat;}";
+    invoke-expression "cmd /c call powershell -command {./apache_stop.bat;}";
     Write-Host "Apache halted.";
 }
 
