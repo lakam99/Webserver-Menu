@@ -1,4 +1,4 @@
-﻿function throw-if-service-not-exist {
+function throw-if-service-not-exist {
     param ([string]$service_name);
     $service_exists = Get-Service $service_name;
     if ($service_exists -eq $null) {
@@ -23,8 +23,8 @@ function is-service-started ($service) {
 function stop-service-if-not {
     param ([string]$service_name);
     $service = throw-if-service-not-exist($service_name);
-    if ((is-service-started($service)) -eq $true) {
-        sep-cmd(("Stop-Service $service_name"));
+    if ($service.CanStop) {
+        stop-service $service_name;
         Write-Host $service_name "stopped.";
     } else {
         Write-Host $service_name "already stopped.";
@@ -36,34 +36,43 @@ function start-service-if-not {
     param ([string]$service_name);
     $service = throw-if-service-not-exist($service_name);
     if ((is-service-started($service)) -eq $false) {
-        sep-cmd(("Start-Service $service_name"));
+        start-service $service_name;
         Write-Host $service_name "started.";
     } else {
         Write-Host $service_name "already started.";
     }
 }
 
-function sep-cmd {
-    param ([string]$command, [string]$path);
-    $args = "";
-    if ($path -ne $null) {
-        $args = $args + " Set-Location $path";
-    }
+function restart-webserver($service) {
+    stop-service-if-not($service);
+    start-service-if-not $service;
+    stop-apache;
+    start-apache;
 
-    start-process -filepath "powershell" -argumentlist "$args; $command; pause";
-    
 }
+
 
 #apache
 
 function start-apache {
-    sep-cmd("./apache_start.bat", "C:\xampp");
+    set-location "C:\xampp";
+    start-process -filepath ".\apache_start.bat";
     Write-Host "Apache started.";
 }
 
 function stop-apache {
-    sep-cmd("./apache_stop.bat", "C:\xampp");
+    set-location "C:\xampp";
+    invoke-expression "cmd /c start powershell -command {./apache_stop.bat;}";
     Write-Host "Apache halted.";
+}
+
+#github
+
+function commit-branch ($branch_name) {
+    Set-Location "C:\xampp\htdocs\amazonRanker\";
+    $cmd = -join("cmd /c git push origin ", $branch_name);
+    invoke-expression $cmd;
+    Set-Location "C:\";
 }
 
 
@@ -72,15 +81,18 @@ function stop-apache {
 function process-menu {
     $exit = $false;
     $service = "MySQL56";
+    $branch = "az4";
     while ($exit -ne $true) {
         print-menu;
         $input = get-menu-input;
         switch ($input) {
             "1" {start-service-if-not($service); start-apache; break;}
             "2" {stop-service-if-not($service); stop-apache; break;}
-            "3" {pause; $exit = $true; break;}
+            "3" {commit-branch($branch); break;}
+            "4" {pause; $exit = $true; break;}
         }
     }
+    Set-Location "C:\";
 }
 
 function get-menu-input {
@@ -90,7 +102,8 @@ function get-menu-input {
 function print-menu {
     write-host "1. Start Webserver";
     write-host "2. Stop Webserver";
-    write-host "3. Quit";
+    write-host "3. Commit az4 to github";
+    write-host "4. Quit";
 } 
 
 
